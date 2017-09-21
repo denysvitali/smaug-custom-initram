@@ -31,11 +31,7 @@ echo "3 255 0 0" > /sys/class/chromeos/cros_ec/lightbar/led_rgb;
 busybox sleep 2
 
 # Mount the root filesystem, second partition on micro SDcard
-busybox mount -t ext4 -o noatime,nodiratime,errors=panic /dev/mmcblk0p7 /mnt
-
-busybox mkdir /rootfs
-
-busybox mount /mnt/Arch /rootfs
+busybox mount -t ext4 -o noatime,nodiratime,errors=panic /dev/mmcblk0p4 /mnt
 
 # 1/4 System Mounted
 echo "0 0 255 0" > /sys/class/chromeos/cros_ec/lightbar/led_rgb;
@@ -56,7 +52,7 @@ busybox sync
 echo "1 0 255 0" > /sys/class/chromeos/cros_ec/lightbar/led_rgb;
 
 # Transfer root to SDcard
-exec /sbin/busybox switch_root /rootfs /sbin/init
+exec /sbin/busybox switch_root /mnt /sbin/init
 
 # Init ended 3/4
 echo "2 0 255 0" > /sys/class/chromeos/cros_ec/lightbar/led_rgb;
