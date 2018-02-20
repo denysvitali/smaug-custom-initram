@@ -4,6 +4,7 @@ _PATH="$PATH"
 export PATH=/sbin
 
 external_drive=false
+in_data=false
 
 # Mount the /proc and /sys filesystems
 busybox mount -t proc none /proc
@@ -49,6 +50,9 @@ busybox mount -t ext4 -o noatime,nodiratime,errors=panic,rw /dev/mmcblk0p6 /cach
 busybox ls -la /dev > /cache/ls-la.txt
 busybox dmesg > /cache/dmesg.txt
 
+busybox ls -la /dev/mmc*
+busybox ls -la /dev/dm*
+
 if [ "$external_drive" == true ]
 then
     # Mount /dev/sda1 to /mnt
@@ -71,20 +75,36 @@ then
     busybox mount -t ext4 -o noatime,nodiratime,errors=panic,rw /dev/sda1 /mnt
     echo "SDA1 mounted!" >> /cache/log.txt
 else
-    # Rootfs on "APP", mmcblk0p4, 3.8G (Android's /system partition) :
-    echo "Loading rootfs from /system partition" >> /cache/log.txt
-    busybox mount -t ext4 -o noatime,nodiratime,errors=panic,rw /dev/mmcblk0p4 /mnt
-    echo "System mounted!" >> /cache/log.txt
+    if [ "$in_data" == true ]
+    then
+	    echo "Loading rootfs from /data/Arch" >> /cache/log.txt
+	    busybox mount /dev/mmcblk0p7 /mnt
+    	echo "Rootfs mounted from /data/Arch!" >> /cache/log.txt
+    else
+    	# Rootfs on "APP", mmcblk0p4, 3.8G (Android's /system partition) :
+    	echo "Loading rootfs from /system partition" >> /cache/log.txt
+    	busybox mount -t ext4 -o noatime,nodiratime,errors=panic,rw /dev/mmcblk0p4 /mnt
+    	echo "System mounted!" >> /cache/log.txt
+    fi
 fi
 
 # Mount /vendor as Read Only
 busybox mount -t ext4 -o noatime,nodiratime,errors=panic,ro /dev/mmcblk0p5 /vendor
 echo "Vendor mounted!" >> /cache/log.txt
 
+# Enable Bluetooth
+echo "Enabling bluetooth..."
+/bin/brcm_patchram_plus -d --patchram /vendor/firmware/bcm4350c0.hcd --enable_lpm --enable_hci --use_baudrate_for_download --bd_addr 11:22:33:44:55:66 --no2bytes --tosleep 1000 /dev/ttyTHS2
+
 busybox mkdir /rootfs
 
-#busybox mount /mnt/Arch /rootfs
-busybox mount /mnt/ /rootfs
+if [ "$in_data" == true ]
+then
+    busybox ls -la /mnt
+	busybox mount /mnt/Arch /rootfs
+else
+	busybox mount /mnt/ /rootfs
+fi
 busybox mount /vendor /rootfs/vendor
 
 echo "Mounted vendor and mnt to /rootfs/{,vendor}" >> /cache/log.txt
