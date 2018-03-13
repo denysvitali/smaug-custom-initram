@@ -24,9 +24,26 @@ cd /dev && busybox mknod console c 5 1
 echo "STOP" > /sys/class/chromeos/cros_ec/lightbar/sequence;
 echo "0 255 255 255 1 255 255 255 2 255 255 255 3 255 255 255" > /sys/class/chromeos/cros_ec/lightbar/led_rgb;
 
-#watchdogd 10 20
+# Mount /cache
+busybox mkdir /cache
+busybox mount -t ext4 -o noatime,nodiratime,errors=panic,rw /dev/mmcblk0p6 /cache
 
-/sbin/adbd &
+# Mount /vendor as Read Only
+busybox mount -t ext4 -o noatime,nodiratime,errors=panic,ro /dev/mmcblk0p5 /vendor
+echo "Vendor mounted!" >> /cache/log.txt
+
+## Enable Bluetooth
+#echo "Enabling bluetooth..."
+#/sbin/brcm_patchram_plus -d --patchram \
+#    /lib/firmware/brcm/BCM4350C0_003.001.012.0364.0754.hcd \
+#    --no2bytes \
+#    --baudrate 3000000 \
+#    --use_baudrate_for_download \
+#    --bd_addr 00:b6:c3:e8:b8:b5 \
+#    --enable_hci \
+#    /dev/ttyTHS3  > /dev/null &
+
+#watchdogd 10 20
 
 # Debug, turn on light bar if successful!
 
@@ -36,7 +53,7 @@ echo "1 255 0 0" > /sys/class/chromeos/cros_ec/lightbar/led_rgb;
 echo "2 255 0 0" > /sys/class/chromeos/cros_ec/lightbar/led_rgb;
 echo "3 255 0 0" > /sys/class/chromeos/cros_ec/lightbar/led_rgb;
 
-busybox sleep 2
+#busybox sleep 2
 
 # Dragon partitions: https://docs.google.com/spreadsheets/d/1uxdTSz23kFRDXrezeAclMY9yy8ih9cbi6UFVOFrVXJ8/edit?usp=sharing
 
@@ -45,13 +62,13 @@ busybox sleep 2
 # busybox mount -t ext4 -o noatime,nodiratime,errors=panic /dev/mmcblk0p7 /mnt
 
 ## DEBUG
-busybox mkdir /cache
-busybox mount -t ext4 -o noatime,nodiratime,errors=panic,rw /dev/mmcblk0p6 /cache
 busybox ls -la /dev > /cache/ls-la.txt
 busybox dmesg > /cache/dmesg.txt
 
 busybox ls -la /dev/mmc*
 busybox ls -la /dev/dm*
+echo "==== TTY TH* ===="
+busybox ls -la /dev/ttyTH*
 
 if [ "$external_drive" == true ]
 then
@@ -87,14 +104,6 @@ else
     	echo "System mounted!" >> /cache/log.txt
     fi
 fi
-
-# Mount /vendor as Read Only
-busybox mount -t ext4 -o noatime,nodiratime,errors=panic,ro /dev/mmcblk0p5 /vendor
-echo "Vendor mounted!" >> /cache/log.txt
-
-# Enable Bluetooth
-echo "Enabling bluetooth..."
-/bin/brcm_patchram_plus -d --patchram /vendor/firmware/bcm4350c0.hcd --enable_lpm --enable_hci --use_baudrate_for_download --bd_addr 11:22:33:44:55:66 --no2bytes --tosleep 1000 /dev/ttyTHS2
 
 busybox mkdir /rootfs
 
@@ -147,4 +156,3 @@ umount /rootfs
 
 # Before shutdown 4/4 [****]
 echo "0 0 255 0 1 0 255 0 2 0 255 0 3 0 255 0" > /sys/class/chromeos/cros_ec/lightbar/led_rgb;
-shutdown
